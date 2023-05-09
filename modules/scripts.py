@@ -1,7 +1,7 @@
 import os
 
 from .paths import script_path
-import modules.extensions
+from modules import extensions
 
 
 def list_files_with_name(filename):

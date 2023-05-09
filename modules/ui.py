@@ -1,9 +1,12 @@
 import os
 import gradio as gr
+import gradio.routes
 
+
+from modules import ui_extra_networks
 from .paths import script_path, data_path
 from .scripts import list_files_with_name
-
+from .ui_components import FormRow
 
 def webpath(fn):
     if fn.startswith(script_path):
@@ -49,7 +52,35 @@ def css_html():
 
     return head
 
+def reload_javascript():
+    js = javascript_html()
+    css = css_html()
+
+    def template_response(*args, **kwargs):
+        res = gradio.routes.templates.TemplateResponse(*args, **kwargs)
+        res.body = res.body.replace(b'</head>', f'{js}</head>'.encode("utf8"))
+        res.body = res.body.replace(b'</body>', f'{css}</body>'.encode("utf8"))
+        res.init_headers()
+        return res
+
+
 
 def create_ui():
     
-    ... 
+    reload_javascript()
+    
+    with gr.Blocks() as demo:
+        
+        with gr.Row():
+            extra_button = gr.Button("submit")
+        with gr.Row():
+            with gr.Column():
+                pic_uploader = gr.Image()
+            with gr.Column():
+                pic_shower = gr.Image()
+        
+        with FormRow(variant="compact") as extra_networks:
+            ui_extra_networks.create_ui(extra_networks, extra_button, "text")
+            
+            
+    return demo

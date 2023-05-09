@@ -1,5 +1,8 @@
 import gradio as gr
-from modules.paths import data_path
+import modules.ui
 
 
-print(data_path)
+
+if __name__ == "__main__":
+    demo = modules.ui.create_ui()
+    demo.queue(20).launch()
