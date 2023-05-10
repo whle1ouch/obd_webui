@@ -13,9 +13,15 @@ ScriptCallback = namedtuple("ScriptCallback", ["script", "callback"])
 callback_map = dict(
     callbacks_app_started = [],
     callbacks_model_loaded = [],
-    callback_ui_tabs=[],
-    callbacks_before_ui=[],
+    callbacks_ui_tabs=[],
+    callbacks_ui_train_tabs=[],
+    callbacks_before_ui=[]
 )
+
+
+class UiTrainTabParams:
+    def __init__(self, preview_params):
+        self.preview_params = preview_params
 
 
 def before_ui_callback():
@@ -42,3 +48,23 @@ def remove_current_script_callbacks():
     for callback_list in callback_map.values():
         for callback_to_remove in [cb for cb in callback_list if cb.script == filename]:
             callback_list.remove(callback_to_remove)
+            
+            
+def ui_tabs_callback():
+    res = []
+
+    for c in callback_map['callbacks_ui_tabs']:
+        try:
+            res += c.callback() or []
+        except Exception:
+            report_exception(c, 'ui_tabs_callback')
+
+    return res
+
+
+def ui_train_tabs_callback(params: UiTrainTabParams):
+    for c in callback_map['callbacks_ui_train_tabs']:
+        try:
+            c.callback(params)
+        except Exception:
+            report_exception(c, 'callbacks_ui_train_tabs')

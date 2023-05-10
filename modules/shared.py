@@ -2,9 +2,12 @@ import argparse
 import os
 import json
 import sys
+import gradio as gr
 
 from modules import errors
+from modules import ui_components
 from modules.paths import data_path
+
 
 parser = argparse.ArgumentParser()
 
@@ -16,23 +19,37 @@ parser.add_argument("--ui-settings-file", type=str, help="filename to use for ui
 
 demo = None
 
+tab_names = []
 cmd_opts, _ = parser.parse_known_args()
 
+class OptionInfo:
+    def __init__(self, default=None, label="", component=None, component_args=None, onchange=None, section=None, refresh=None):
+        self.default = default
+        self.label = label
+        self.component = component
+        self.component_args = component_args
+        self.onchange = onchange
+        self.section = section
+        self.refresh = refresh
+        
+        
+def options_section(section_identifier, options_dict):
+    for k, v in options_dict.items():
+        v.section = section_identifier
+
+    return options_dict
+
+hide_dirs = {"visible": True}
 options_templates = {}
+
+# options_templates.update(options_section(('ui', "User interface"), {
+#     "hidden_tabs": OptionInfo([], "Hidden UI tabs (requires restart)", ui_components.DropdownMulti, lambda: {"choices": [x for x in tab_names]}),
+# }))
+
 
 settings_components = None
 
 restricted_opts = {
-    "samples_filename_pattern",
-    "directories_filename_pattern",
-    "outdir_samples",
-    "outdir_txt2img_samples",
-    "outdir_img2img_samples",
-    "outdir_extras_samples",
-    "outdir_grids",
-    "outdir_txt2img_grids",
-    "outdir_save",
-    "outdir_init_images"
     }
 
 class Options:

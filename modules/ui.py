@@ -6,9 +6,11 @@ import gradio.routes
 from modules import ui_extra_networks
 from modules.paths import script_path, data_path
 from modules.scripts import list_files_with_name
-from modules.ui_components import FormRow
 from modules.shared import opts
+from modules import script_callbacks
 from modules import shared
+from modules import call_queue
+
 
 def webpath(fn):
     if fn.startswith(script_path):
@@ -77,41 +79,111 @@ def get_value_for_setting(key):
 def create_ui():
     
     reload_javascript()
+    from modules.detects import image_detect, video_detect
     
-    with gr.Blocks() as demo:
-        
-        with gr.Row().style(equal_height=False):
-            with gr.Column(variant="compact"):
-                
-                with FormRow(elem_id="models"):
-                    model_name = gr.Dropdown(["yolov4", "yolov5"])
-            with gr.Column(variant="compact"):
-                
-                with FormRow(elem_id="model_checkpoint"):
-                    model_checkpoint = gr.Dropdown(["yolov4.pth", "yolov5.pth"])
-        
+    with gr.Blocks() as image_interface:
         with gr.Row():
-            extra_button = gr.Button("submit")
-        with gr.Row():
+            with gr.Column(variant="compact", scale=6):
+                with gr.Row(elem_id="models"):
+                    model_name = gr.Dropdown(["yolov4", "yolov5"], label="select detect model")
+                    model_checkpoint = gr.Dropdown(["yolov4.pth", "yolov5.pth"], label="select model checkpoint")
+                
+                with gr.Row(elem_id="image_size"):
+                    image_height = gr.Slider(1, 512, 204, step=1, label="image height")
+                    image_width = gr.Slider(1, 512, 204, step=1, label="image width")
+            with gr.Column(variant="compact"):
+                with gr.Row():
+                    with gr.Column():
+                        submit_button = gr.Button("Submit", elem_id="image_submit")
             
+        with gr.Row():
             with gr.Column():
                 pic_uploader = gr.Image()
             with gr.Column():
-                pic_shower = gr.AnnotatedImage() 
-        
-        with FormRow(variant="compact") as extra_networks:
-            ui_extra_networks.create_ui(extra_networks, extra_button, "text")
+                pic_shower = gr.AnnotatedImage()
+                
+        image_detect_args = dict(
+            fn=call_queue.wrap_gradio_gpu_call(image_detect, extra_outputs=None),
+            inputs=[
+                pic_uploader,
+                image_height,
+                image_width,
+            ],
+            outputs=[pic_shower]
+        )
+        submit_button.click(**image_detect_args)
+                
     
-        components = []
-        component_dict = {}
-        shared.settings_components = component_dict
+    with gr.Blocks() as video_interface:
+        with gr.Row():
+            with gr.Column(variant="compact", scale=6):
+                with gr.Row(elem_id="models"):
+                    model_name = gr.Dropdown(["yolov4", "yolov5"], label="select detect model")
+                    model_checkpoint = gr.Dropdown(["yolov4.pth", "yolov5.pth"], label="select model checkpoint")
+                
+                with gr.Row(elem_id="image_size"):
+                    image_height = gr.Slider(1, 512, 204, step=1, label="image height")
+                    image_width = gr.Slider(1, 512, 204, step=1, label="image width")
+            with gr.Column(variant="compact"):
+                with gr.Row():
+                    with gr.Column():
+                        run_button = gr.Button("Run", elem_id="image_submit")
+        with gr.Row():
+            with gr.Column():
+                pic_uploader = gr.Video(label="upload the video")
+            with gr.Column():
+                pic_shower = gr.Video(interactive=False)
+                    
+    with gr.Blocks() as train_interface:
+        with gr.Row():
+            with gr.Column(variant="compact", scale=6):
+                with gr.Row(elem_id="models"):
+                    model_name = gr.Dropdown(["yolov4", "yolov5"], label="select detect model")
+                    model_checkpoint = gr.Dropdown(["yolov4.pth", "yolov5.pth"], label="select model checkpoint")
+                
+                with gr.Row(elem_id="image_size"):
+                    image_height = gr.Slider(1, 512, 204, step=1, label="image height")
+                    image_width = gr.Slider(1, 512, 204, step=1, label="image width")
+            with gr.Column(variant="compact"):
+                with gr.Row():
+                    with gr.Column():
+                        run_button = gr.Button("Run", elem_id="image_submit")
+        with gr.Row():
+             train_progress = gr.Progress()
+             
+    interfaces = [
+        (image_interface, "imageDetect", "imageDetect"),
+        (video_interface, "videoDetect", "videoDetect"),
+        (train_interface, "Train", "ti"),
+    ]
+    
+    #interfaces += script_callbacks.ui_tabs_callback()
+    #interfaces+= [(settings_interface, "Settings", "settings")]
+    
+    # shared.tab_names = []
+    # for _interface, label, _ifid in interfaces:
+    #     shared.tab_names.append(label)
         
-        component_keys = [k for k in opts.data_labels.keys() if k in component_dict]
+    with gr.Blocks() as demo:
         
-        def get_settings_values():
-                return [get_value_for_setting(key) for key in component_keys]
+        with gr.Tabs(elem_id="tabs") as tabs:
+            for interface, label, ifid in interfaces:
+                # if label in shared.opts.hidden_tabs:
+                #     continue
+                with gr.TabItem(label, id=ifid, elem_id='tab_' + ifid):
+                    interface.render()
+            
+    
+        # components = []
+        # component_dict = {}
+        # shared.settings_components = component_dict
         
-        demo.load(fn=get_settings_values, inputs=[],outputs=[component_dict[k] for k in component_keys],queue=False,)
+        # component_keys = [k for k in opts.data_labels.keys() if k in component_dict]
+        
+        # def get_settings_values():
+        #         return [get_value_for_setting(key) for key in component_keys]
+        
+        # demo.load(fn=get_settings_values, inputs=[],outputs=[component_dict[k] for k in component_keys],queue=False,)
             
             
     return demo
