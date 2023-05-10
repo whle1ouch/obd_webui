@@ -1,8 +1,5 @@
-import gradio as gr
-import modules.ui
-
+import webui
 
 
 if __name__ == "__main__":
-    demo = modules.ui.create_ui()
-    demo.queue(20).launch()
+    webui.webui()
